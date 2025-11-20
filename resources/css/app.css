@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+html {
+    background-color: #0f172a; /* Warna Slate-950 */
+}
+body {
+    overscroll-behavior-y: none; /* Ini yang mematikan efek pantulan saat mentok */
+}
