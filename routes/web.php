@@ -10,41 +10,47 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// --- DASHBOARD (ADMIN & KARYAWAN) ---
+// Single dashboard route that handles both roles
+Route::middleware('auth')->get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
 // --- AREA KHUSUS ADMIN ---
 // Satpam: Harus Login ('auth') DAN Harus Admin ('role:admin')
 Route::middleware(['auth', 'role:admin'])->group(function () {
-    
-    // 1. Dashboard Admin (Sekarang pakai Controller biar angkanya muncul)
-    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
-    // 2. CRUD Projects (Fitur Hari 3)
-    // Ini otomatis bikin jalur: index, create, store, edit, update, destroy
-    Route::resource('admin/projects', ProjectController::class);
-    Route::get('/admin/projects/{project}/members', [ProjectController::class, 'getMembers'])->name('projects.members');
+    // 2. CRUD Projects - Akses utama untuk project management
+    Route::resource('projects', ProjectController::class);
+    Route::get('/projects/{project}/members', [ProjectController::class, 'getMembers'])->name('projects.members');
 
-    //task
-    Route::resource('admin/tasks', \App\Http\Controllers\TaskController::class);
-    
+    // 3. CRUD Tasks - Hanya create, store, edit, update, destroy (show pakai route unified)
+    Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+    Route::get('/projects/{project}/tasks/create', [TaskController::class, 'create'])->name('projects.tasks.create');
+    Route::get('/tasks/{task}/edit', [TaskController::class, 'edit'])->name('tasks.edit');
+    Route::patch('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+    Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
 });
 
-// --- AREA KHUSUS KARYAWAN ---
-// Satpam: Harus Login ('auth') DAN Harus Karyawan ('role:karyawan')
-Route::middleware(['auth', 'role:karyawan'])->group(function () {
-    
-    // Dashboard Karyawan (Pakai Controller juga)
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-    // Nanti Route list tugas karyawan ditaruh sini...
-});
-
-
-// --- AREA UMUM (YANG PENTING LOGIN) ---
-// Admin & Karyawan boleh masuk sini untuk edit profil
+// --- AREA UMUM (ADMIN & KARYAWAN) ---
+// Routes yang bisa diakses oleh both admin dan karyawan
 Route::middleware('auth')->group(function () {
+    // View Projects & Tasks (keduanya bisa lihat)
+    Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+    
+    // Progress history untuk task
+    Route::get('/tasks/{task}/progress', [TaskController::class, 'progress'])->name('tasks.progress');
+    
+    // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Chat & Comments
+    Route::post('/comments', [App\Http\Controllers\CommentController::class, 'store'])->name('comments.store');
+
+    // Update status & progress report
+    Route::put('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
 });
 
 require __DIR__.'/auth.php';

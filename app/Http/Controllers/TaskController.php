@@ -5,63 +5,67 @@ namespace App\Http\Controllers;
 use App\Models\Task;
 use App\Models\Project;
 use App\Models\User;
+use App\Models\Comment; // Jangan lupa ini
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
-    // 1. DAFTAR TUGAS (INDEX)
     public function index()
     {
-        $tasks = Task::with(['project', 'user'])
-                     ->orderBy('due_date', 'asc')
-                     ->get();
-                     
+        $tasks = Task::with(['project', 'users'])->orderBy('due_date', 'asc')->get();
         return view('admin.tasks.index', compact('tasks'));
     }
 
-    // 2. FORM TAMBAH TUGAS (CREATE)
-    public function create()
+    public function create(Project $project = null)
     {
         $projects = Project::all();
         $users = User::where('role', 'karyawan')->get();
-
+        
+        // Jika dari project detail, set project_id
+        if ($project) {
+            return view('admin.tasks.create', compact('projects', 'users', 'project'));
+        }
+        
         return view('admin.tasks.create', compact('projects', 'users'));
     }
 
-    // 3. SIMPAN TUGAS (STORE)
     public function store(Request $request)
     {
-        // Validasi: Deskripsi WAJIB diisi (required)
         $request->validate([
             'title'       => 'required|string|max:255',
             'project_id'  => 'required|exists:projects,id',
-            'user_id'     => 'required|exists:users,id',
+            'user_ids'    => 'required|array',
             'priority'    => 'required|in:low,medium,high',
             'due_date'    => 'required|date',
-            'description' => 'required|string', // <--- SUDAH DIUBAH JADI WAJIB
+            'description' => 'required|string',
         ]);
 
-        Task::create([
+        $task = Task::create([
             'title'       => $request->title,
             'project_id'  => $request->project_id,
-            'user_id'     => $request->user_id,
             'priority'    => $request->priority,
             'due_date'    => $request->due_date,
-            'description' => $request->description, // Tidak perlu fallback '-' lagi
+            'description' => $request->description,
             'status'      => 'pending',
         ]);
 
-        return redirect()->route('tasks.index')->with('success', 'Tugas berhasil diberikan!');
+        $task->users()->syncWithoutDetaching($request->user_ids);
+        return redirect()->route('projects.show', $task->project)->with('success', 'Tugas berhasil dibagikan!');
     }
 
-    // 4. DETAIL TUGAS (SHOW)
     public function show(Task $task)
     {
-        $task->load(['project', 'user']);
+        $task->load(['project', 'users', 'usersWithProjectRole', 'comments.user']);
+
+        // Karyawan pakai tampilan khusus sendiri
+        if (auth()->check() && auth()->user()->role === 'karyawan') {
+            return view('karyawan.tasks.show', compact('task'));
+        }
+
+        // Admin (atau role lain) tetap pakai tampilan admin
         return view('admin.tasks.show', compact('task'));
     }
 
-    // 5. FORM EDIT TUGAS (EDIT)
     public function edit(Task $task)
     {
         $projects = Project::all();
@@ -69,29 +73,70 @@ class TaskController extends Controller
         return view('admin.tasks.edit', compact('task', 'projects', 'users'));
     }
 
-    // 6. UPDATE TUGAS (UPDATE)
     public function update(Request $request, Task $task)
     {
-        // Validasi Update: Deskripsi juga WAJIB
-        $request->validate([
-            'title'       => 'required|string|max:255',
-            'project_id'  => 'required|exists:projects,id',
-            'user_id'     => 'required|exists:users,id',
-            'priority'    => 'required|in:low,medium,high',
-            'status'      => 'required|in:pending,in_progress,completed',
-            'due_date'    => 'required|date',
-            'description' => 'required|string', // <--- WAJIB
-        ]);
-
-        $task->update($request->all());
-
-        return redirect()->route('tasks.index')->with('success', 'Detail tugas diperbarui!');
+        $task->update($request->except('user_ids'));
+        if ($request->has('user_ids')) {
+            $task->users()->sync($request->user_ids);
+        }
+        return redirect()->route('projects.show', $task->project)->with('success', 'Tugas diperbarui!');
     }
 
-    // 7. HAPUS TUGAS (DESTROY)
     public function destroy(Task $task)
     {
+        $projectId = $task->project_id;
         $task->delete();
-        return redirect()->route('tasks.index')->with('success', 'Tugas dihapus!');
+        return redirect()->route('projects.show', $projectId)->with('success', 'Tugas dihapus!');
+    }
+
+    // KHUSUS KARYAWAN: Update Status & Link GitHub & Laporan
+    public function updateStatus(Request $request, Task $task)
+    {
+        $request->validate([
+            'report_title' => 'required|string|max:255',
+            'report_desc'  => 'required|string',
+            'status'       => 'required|in:pending,in_progress,completed',
+            'github_link'  => 'nullable|url', // Validasi URL
+        ]);
+
+        // Simpan Link GitHub & Status
+        $task->update([
+            'status' => $request->status,
+            'github_link' => $request->github_link ?? $task->github_link,
+        ]);
+
+        $statusText = match($request->status) {
+            'pending' => 'Pending',
+            'in_progress' => 'On Progress',
+            'completed' => 'Selesai',
+        };
+
+        // Simpan Laporan ke Komentar
+        Comment::create([
+            'task_id' => $task->id,
+            'user_id' => auth()->id(),
+            'title'   => $request->report_title,
+            'content' => $request->report_desc . "\n\nStatus: $statusText",
+        ]);
+
+        return back()->with('success', 'Laporan berhasil dikirim!');
+    }
+
+    // API Get Members (Untuk Form Create)
+    public function myTasks()
+    {
+        $user = auth()->user();
+        $tasks = Task::whereHas('users', function($q) use ($user) {
+            $q->where('users.id', $user->id);
+        })->orderBy('due_date', 'asc')->get();
+
+        return view('karyawan.tasks.index', compact('tasks'));
+    }
+
+    // Halaman khusus riwayat progres untuk satu task (karyawan)
+    public function progress(Task $task)
+    {
+        $task->load(['project', 'users', 'usersWithProjectRole', 'comments.user']);
+        return view('karyawan.tasks.progress', compact('task'));
     }
 }

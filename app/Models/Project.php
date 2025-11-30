@@ -17,4 +17,10 @@ class Project extends Model
     {
        return $this->belongsToMany(User::class, 'project_user')->withPivot('role'); // ambil dengan pivot rolenya
     }
+
+    // Relasi: Satu Project punya BANYAK Tasks
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
 }

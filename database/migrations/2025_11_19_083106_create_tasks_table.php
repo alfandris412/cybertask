@@ -9,28 +9,22 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
-        Schema::create('tasks', function (Blueprint $table) {
+    public function up()
+{
+    Schema::create('tasks', function (Blueprint $table) {
         $table->id();
-        // RELASI (Foreign Key)
         $table->foreignId('project_id')->constrained()->onDelete('cascade');
-        $table->foreignId('user_id')->constrained()->onDelete('cascade');
+        // $table->foreignId('user_id')->constrained()->onDelete('cascade'); // <-- HAPUS BARIS INI
         
-        // DATA TUGAS
         $table->string('title');
-        $table->text('description');
+        $table->text('description')->nullable();
         $table->enum('status', ['pending', 'in_progress', 'completed'])->default('pending');
         $table->enum('priority', ['low', 'medium', 'high'])->default('medium');
         $table->date('due_date');
-        
-        // SYARAT SKKNI (Akses File & Integrasi)
-        $table->string('file_lampiran')->nullable(); 
-        $table->string('github_link')->nullable();
-        
+        $table->string('file_lampiran')->nullable();
         $table->timestamps();
     });
-    }
+}
 
     /**
      * Reverse the migrations.

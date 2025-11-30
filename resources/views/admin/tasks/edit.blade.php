@@ -2,10 +2,10 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-bold text-xl text-white tracking-tight">
-                {{ __('Buat Tugas Baru') }}
+                {{ __('Edit Tugas') }}
             </h2>
-            <a href="{{ isset($project) ? route('projects.show', $project) : route('tasks.index') }}" class="text-slate-400 hover:text-white transition-colors text-sm">
-                &larr; Kembali
+            <a href="{{ route('projects.show', $task->project) }}" class="text-slate-400 hover:text-white transition-colors text-sm">
+                &larr; Kembali ke Project
             </a>
         </div>
     </x-slot>
@@ -24,13 +24,12 @@
 
                 <div class="p-8 text-slate-300 relative z-10" 
                      x-data="{
-                        projectId: '{{ isset($project) ? $project->id : '' }}',
+                        projectId: '{{ $task->project_id }}',
                         projectMembers: [],
                         selectedUsers: [],
                         isLoading: false,
-                        assignMode: 'manual', // 'manual' atau 'role'
+                        assignMode: 'manual',
 
-                        // Ambil data member saat project dipilih
                         async fetchMembers() {
                             if (!this.projectId) return;
                             
@@ -41,6 +40,10 @@
                             try {
                                 let response = await fetch(`/projects/${this.projectId}/members`);
                                 this.projectMembers = await response.json();
+                                
+                                // Pre-select current task members
+                                const currentMemberIds = {!! Js::from($task->users->pluck('id')->toArray()) !!};
+                                this.selectedUsers = currentMemberIds;
                             } catch (error) {
                                 console.error('Error:', error);
                             } finally {
@@ -48,39 +51,29 @@
                             }
                         },
 
-                        // Helper: Ambil daftar role unik yang ada di project ini
                         get uniqueRoles() {
-                            // Mengambil role unik dari projectMembers
                             const roles = this.projectMembers.map(m => m.project_role);
                             return [...new Set(roles)];
                         },
 
-                        // Helper: Hitung berapa orang di role tertentu
                         countMemberByRole(roleName) {
                             return this.projectMembers.filter(u => u.project_role === roleName).length;
                         },
 
-                        // Action: Pilih semua orang dengan role tertentu
                         toggleRoleGroup(roleName) {
-                            // Cari ID orang-orang dengan role ini
                             const idsInRole = this.projectMembers
                                 .filter(u => u.project_role === roleName)
                                 .map(u => u.id);
 
-                            // Cek apakah semua orang di role ini sudah terpilih?
                             const allSelected = idsInRole.every(id => this.selectedUsers.includes(id));
 
                             if (allSelected) {
-                                // Kalau sudah terpilih semua, HAPUS mereka (Unselect)
                                 this.selectedUsers = this.selectedUsers.filter(id => !idsInRole.includes(id));
                             } else {
-                                // Kalau belum, TAMBAHKAN mereka (Select)
-                                // Gunakan Set untuk mencegah duplikat ID
                                 this.selectedUsers = [...new Set([...this.selectedUsers, ...idsInRole])];
                             }
                         },
                         
-                        // Cek apakah grup role ini sedang aktif (terpilih semua)
                         isRoleSelected(roleName) {
                              const idsInRole = this.projectMembers
                                 .filter(u => u.project_role === roleName)
@@ -95,29 +88,22 @@
                         }
                      }">
                     
-                    <form action="{{ route('tasks.store') }}" method="POST">
-                        @csrf 
-                        @if(isset($project))
-                            <input type="hidden" name="project_id" value="{{ $project->id }}">
-                        @endif
+                    <form action="{{ route('tasks.update', $task) }}" method="POST">
+                        @csrf
+                        @method('PATCH')
                         
                         <div class="mb-6">
                             <label class="block text-sm font-bold text-white mb-2">Judul Tugas <span class="text-red-500">*</span></label>
-                            <input type="text" name="title" class="w-full rounded-2xl border-slate-700 bg-slate-950/50 text-white placeholder-slate-500 shadow-inner focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 focus:bg-slate-900 transition-all duration-300 p-3" placeholder="Contoh: Fix Bug Login" required>
+                            <input type="text" name="title" value="{{ old('title', $task->title) }}" class="w-full rounded-2xl border-slate-700 bg-slate-950/50 text-white placeholder-slate-500 shadow-inner focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 focus:bg-slate-900 transition-all duration-300 p-3" placeholder="Contoh: Fix Bug Login" required>
                         </div>
 
                         <div class="mb-6">
                             <label class="block text-sm font-bold text-white mb-2">Project <span class="text-red-500">*</span></label>
-                            <select name="project_id" x-model="projectId" @change="fetchMembers()" class="w-full rounded-2xl border-slate-700 bg-slate-950/50 text-white shadow-inner focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 focus:bg-slate-900 transition-all duration-300 p-3 cursor-pointer" required {{ isset($project) ? 'disabled' : '' }}>
-                                <option value="" disabled>Pilih Project...</option>
-                                @foreach($projects as $p)
-                                    <option value="{{ $p->id }}" {{ isset($project) && $p->id === $project->id ? 'selected' : '' }}>{{ $p->name }}</option>
-                                @endforeach
-                            </select>
+                            <input type="text" disabled class="w-full rounded-2xl border-slate-700 bg-slate-950/50 text-slate-500 shadow-inner p-3 cursor-not-allowed" value="{{ $task->project->name }}">
+                            <p class="text-xs text-slate-500 mt-1">Project tidak dapat diubah setelah pembuatan tugas.</p>
                         </div>
 
-                        <div class="mb-8 bg-slate-950/30 border border-slate-800 p-6 rounded-2xl transition-all" 
-                             x-show="projectId" x-transition>
+                        <div class="mb-8 bg-slate-950/30 border border-slate-800 p-6 rounded-2xl transition-all">
                             
                             <div class="flex justify-between items-center mb-6">
                                 <label class="block text-sm font-bold text-indigo-400 uppercase tracking-wider">
@@ -192,7 +178,7 @@
 
                         <div class="mb-6">
                             <label class="block text-sm font-bold text-white mb-2">Detail Instruksi <span class="text-red-500">*</span></label>
-                            <textarea name="description" rows="4" class="w-full rounded-2xl border-slate-700 bg-slate-950/50 text-white placeholder-slate-500 shadow-inner focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 focus:bg-slate-900 transition-all duration-300 p-3" placeholder="Jelaskan apa yang harus dikerjakan..." required></textarea>
+                            <textarea name="description" rows="4" class="w-full rounded-2xl border-slate-700 bg-slate-950/50 text-white placeholder-slate-500 shadow-inner focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 focus:bg-slate-900 transition-all duration-300 p-3" placeholder="Jelaskan apa yang harus dikerjakan..." required>{{ old('description', $task->description) }}</textarea>
                             @error('description')<span class="text-red-500 text-xs mt-1 block font-bold">⚠️ Deskripsi wajib diisi!</span>@enderror
                         </div>
 
@@ -201,9 +187,9 @@
                                 <label class="block text-sm font-bold text-white mb-2">Prioritas <span class="text-red-500">*</span></label>
                                 <div class="relative">
                                     <select name="priority" class="w-full rounded-2xl border-slate-700 bg-slate-950/50 text-white shadow-inner focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 focus:bg-slate-900 transition-all duration-300 p-3 appearance-none cursor-pointer" required>
-                                        <option value="low">🟢 Low (Santai)</option>
-                                        <option value="medium" selected>⚠️ Medium (Standar)</option>
-                                        <option value="high">🔥 High (Mendesak)</option>
+                                        <option value="low" {{ $task->priority == 'low' ? 'selected' : '' }}>🟢 Low (Santai)</option>
+                                        <option value="medium" {{ $task->priority == 'medium' ? 'selected' : '' }}>⚠️ Medium (Standar)</option>
+                                        <option value="high" {{ $task->priority == 'high' ? 'selected' : '' }}>🔥 High (Mendesak)</option>
                                     </select>
                                     <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-500">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -212,18 +198,18 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-white mb-2">Deadline <span class="text-red-500">*</span></label>
-                                <input type="date" name="due_date" class="w-full rounded-2xl border-slate-700 bg-slate-950/50 text-white shadow-inner focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 focus:bg-slate-900 transition-all duration-300 p-3" required>
+                                <input type="date" name="due_date" value="{{ old('due_date', $task->due_date) }}" class="w-full rounded-2xl border-slate-700 bg-slate-950/50 text-white shadow-inner focus:border-indigo-500 focus:ring-indigo-500 focus:ring-2 focus:bg-slate-900 transition-all duration-300 p-3" required>
                             </div>
                         </div>
 
-                        <!-- Pastikan selected users dikirim meskipun kontrolnya di-render via Alpine -->
-                        <template x-for="uid in selectedUsers" :key="uid">
-                            <input type="hidden" name="user_ids[]" :value="uid">
-                        </template>
-
-                        <button type="submit" class="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all transform hover:scale-[1.01] focus:ring-4 focus:ring-indigo-500/30">
-                            Bagikan Tugas
-                        </button>
+                        <div class="flex gap-4">
+                            <button type="submit" class="flex-1 py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all transform hover:scale-[1.01] focus:ring-4 focus:ring-indigo-500/30">
+                                Simpan Perubahan
+                            </button>
+                            <a href="{{ route('tasks.show', $task) }}" class="py-3.5 px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl shadow-lg border border-slate-700 transition-all">
+                                Batal
+                            </a>
+                        </div>
                     </form>
 
                 </div>

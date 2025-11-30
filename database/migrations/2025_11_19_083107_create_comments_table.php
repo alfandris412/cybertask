@@ -12,12 +12,20 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('comments', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('task_id')->constrained()->onDelete('cascade');
-        $table->foreignId('user_id')->constrained()->onDelete('cascade');
-        $table->text('content');
-        $table->timestamps();
-    });
+            $table->id();
+            $table->foreignId('task_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            
+            // UBAH JADI NULLABLE (Biar bisa kirim gambar doang)
+            $table->text('content')->nullable(); 
+            
+            // TAMBAHAN LANGSUNG DISINI
+            $table->string('attachment')->nullable(); 
+            
+            $table->string('title')->nullable(); // (Opsional: Jika kamu pakai fitur Laporan Progres)
+            
+            $table->timestamps();
+        });
     }
 
     /**

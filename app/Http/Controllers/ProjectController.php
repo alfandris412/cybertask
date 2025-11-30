@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ProjectController extends Controller
 {
@@ -52,8 +53,10 @@ class ProjectController extends Controller
     // 4. DETAIL PROJECT (SHOW)
     public function show(Project $project)
     {
-        $project->load('members');
-        return view('admin.projects.show', compact('project'));
+        $project->load(['tasks' => function ($q) {
+            $q->with('users')->orderBy('created_at', 'desc');
+        }]);
+        return view('projects.show', compact('project'));
     }
 
     // 5. TAMPILKAN FORM EDIT (EDIT)
@@ -119,5 +122,20 @@ class ProjectController extends Controller
         });
 
         return response()->json($members);
+    }
+
+    // 9. LIST PROJECT SAYA (UNTUK KARYAWAN)
+    public function myProjects()
+    {
+        $user = Auth::user();
+
+        $projects = Project::whereHas('members', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            })
+            ->with('members')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('karyawan.projects.index', compact('projects'));
     }
 }

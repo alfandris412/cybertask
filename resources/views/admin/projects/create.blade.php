@@ -28,7 +28,7 @@
 
                 <div class="p-8 text-slate-300 relative z-10">
                     
-                    <form action="{{ route('projects.store') }}" method="POST">
+                    <form action="{{ route('projects.store') }}" method="POST" x-data="projectForm()">
                         @csrf 
                         
                         <!-- 1. Nama Project -->
@@ -80,6 +80,7 @@
                             openModal: false, 
                             search: '', 
                             selectedIds: [],
+                            selectedRoles: {},
                             allKaryawan: {{ $karyawan->map(fn($u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'initial' => substr($u->name, 0, 2)]) }},
                             
                             get selectedUsers() {
@@ -88,8 +89,10 @@
                             toggleSelection(id) {
                                 if (this.selectedIds.includes(id)) {
                                     this.selectedIds = this.selectedIds.filter(i => i !== id);
+                                    delete this.selectedRoles[id];
                                 } else {
                                     this.selectedIds.push(id);
+                                    this.selectedRoles[id] = '';
                                 }
                             }
                         }">
@@ -151,7 +154,7 @@
                                              x-show="search === '' || '{{ strtolower($k->name) }}'.includes(search.toLowerCase())">
                                             
                                             <div class="flex items-center h-full">
-                                                <input type="checkbox" name="members[]" value="{{ $k->id }}" 
+                                                <input type="checkbox" :checked="selectedIds.includes('{{ $k->id }}')"
                                                        @change="toggleSelection('{{ $k->id }}')"
                                                        class="w-5 h-5 rounded border-slate-600 bg-slate-900 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
                                             </div>
@@ -162,7 +165,7 @@
                                             </div>
 
                                             <div class="w-1/2" x-show="selectedIds.includes('{{ $k->id }}')" x-transition>
-                                                <input type="text" name="roles[{{ $k->id }}]" 
+                                                <input type="text" x-model="selectedRoles['{{ $k->id }}']"
                                                        class="w-full text-xs rounded-lg border-slate-700 bg-slate-900 text-indigo-300 placeholder-slate-600 focus:border-indigo-500 focus:ring-indigo-500 p-2" 
                                                        placeholder="Posisi? (ex: Frontend)">
                                             </div>
@@ -178,10 +181,23 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Hidden inputs untuk submit members -->
+                            <template x-for="memberId in selectedIds" :key="memberId">
+                                <input type="hidden" name="members[]" :value="memberId">
+                                <input type="hidden" :name="`roles[${memberId}]`" :value="selectedRoles[memberId] || 'Member'">
+                            </template>
                         </div>
 
-                        <button type="submit" class="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all transform hover:scale-[1.01] focus:ring-4 focus:ring-indigo-500/30">
-                            Simpan Project
+                        <button type="submit" class="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all transform hover:scale-[1.01] focus:ring-4 focus:ring-indigo-500/30 disabled:opacity-75 disabled:scale-100 disabled:cursor-not-allowed" :disabled="isSubmitting">
+                            <span x-show="!isSubmitting" class="flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                Simpan Project
+                            </span>
+                            <span x-show="isSubmitting" class="flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                Menyimpan...
+                            </span>
                         </button>
                     </form>
 
@@ -189,4 +205,22 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function projectForm() {
+            return {
+                isSubmitting: false,
+
+                init() {
+                    this.$watch('$el.form', (form) => {
+                        if (form) {
+                            form.addEventListener('submit', (e) => {
+                                this.isSubmitting = true;
+                            });
+                        }
+                    });
+                }
+            };
+        }
+    </script>
 </x-app-layout>

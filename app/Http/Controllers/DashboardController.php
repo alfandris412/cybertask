@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -14,18 +14,48 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         
+        // Dashboard ADMIN: Tampilkan semua projects
+        if ($user->role === 'admin') {
+            $projects = Project::with('tasks')->orderBy('created_at', 'desc')->get();
+            
+            $stats = [
+                'total_projects' => $projects->count(),
+                'total_staff' => User::where('role', 'karyawan')->count(),
+                'pending_tasks' => Task::where('status', '!=', 'completed')->count(),
+            ];
+
+            return view('admin.dashboard', compact('projects', 'stats'));
+        }
+
+        // Dashboard KARYAWAN: Tampilkan projects yang user ikuti + notifikasi overdue
+        $today = Carbon::today();
+        
+        // Get projects dari tasks yang di-assign ke user
+        $projects = Project::whereHas('tasks', function ($q) use ($user) {
+            $q->whereHas('users', function ($q2) use ($user) {
+                $q2->where('users.id', $user->id);
+            });
+        })->with(['tasks' => function ($q) use ($user) {
+            $q->whereHas('users', function ($q2) use ($user) {
+                $q2->where('users.id', $user->id);
+            });
+        }])->orderBy('created_at', 'desc')->get();
+
+        // Notifikasi: Tugas overdue
+        $overdueTasks = Task::whereHas('users', function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        })
+            ->where('status', '!=', 'completed')
+            ->whereDate('due_date', '<', $today)
+            ->with('project')
+            ->orderBy('due_date', 'asc')
+            ->get();
+
         $stats = [
-            'total_projects' => Project::count(),
-            'total_staff' => User::where('role', 'karyawan')->count(),
-            'pending_tasks' => Task::where('status', '!=', 'completed')->count(),
-            'my_tasks' => Task::where('user_id', $user->id)->where('status', '!=', 'completed')->count(),
-            'completed_tasks' => Task::where('user_id', $user->id)->where('status', 'completed')->count(),
+            'my_projects' => $projects->count(),
+            'overdue_count' => $overdueTasks->count(),
         ];
 
-        if ($user->role === 'admin') {
-            return view('admin.dashboard', compact('stats')); 
-        } else {
-            return view('karyawan.dashboard', compact('stats')); 
-        }
+        return view('karyawan.dashboard', compact('projects', 'stats', 'overdueTasks'));
     }
 }

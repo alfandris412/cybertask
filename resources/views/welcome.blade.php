@@ -80,7 +80,7 @@
             <div class="flex items-center gap-4">
                 @if (Route::has('login'))
                     @auth
-                        <a href="{{ Auth::user()->role === 'admin' ? route('admin.dashboard') : route('dashboard') }}" 
+                        <a href="{{ route('dashboard') }}" 
                            class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-full transition-all shadow-lg shadow-indigo-600/30">
                             Dashboard
                         </a>

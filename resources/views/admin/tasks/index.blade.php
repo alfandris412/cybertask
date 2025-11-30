@@ -38,7 +38,7 @@
                             <thead>
                                 <tr class="bg-slate-950/50 border-b border-slate-800">
                                     <th class="px-6 py-5 text-left text-xs font-bold text-slate-400 uppercase tracking-wider w-[30%]">Judul Tugas</th>
-                                    <th class="px-6 py-5 text-left text-xs font-bold text-slate-400 uppercase tracking-wider w-[20%]">Project & PIC</th>
+                                    <th class="px-6 py-5 text-left text-xs font-bold text-slate-400 uppercase tracking-wider w-[20%]">Project & Tim</th>
                                     <th class="px-6 py-5 text-left text-xs font-bold text-slate-400 uppercase tracking-wider w-[15%]">Prioritas</th>
                                     <th class="px-6 py-5 text-left text-xs font-bold text-slate-400 uppercase tracking-wider w-[15%]">Status</th>
                                     <th class="px-6 py-5 text-right text-xs font-bold text-slate-400 uppercase tracking-wider w-[20%] pr-8">Aksi</th>
@@ -55,7 +55,7 @@
                                                 <a href="{{ route('tasks.show', $task) }}" class="text-sm font-bold text-white hover:text-indigo-400 transition-colors line-clamp-2">
                                                     {{ $task->title }}
                                                 </a>
-                                                <div class="text-xs text-slate-500 mt-1">Due: <span class="text-slate-300">{{ \Carbon\Carbon::parse($task->due_date)->format('d M Y') }}</span></div>
+                                                <div class="text-xs text-slate-500 mt-1">Deadline: <span class="text-slate-300">{{ \Carbon\Carbon::parse($task->due_date)->format('d M Y') }}</span></div>
                                             </div>
                                         </div>
                                     </td>
@@ -65,15 +65,27 @@
                                             <div class="text-[10px] font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded w-fit tracking-wide uppercase">
                                                 {{ Str::limit($task->project->name, 15) }}
                                             </div>
-                                            <div class="flex items-center gap-2">
-                                                <div class="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-[9px] text-white font-bold ring-1 ring-slate-600 overflow-hidden">
-                                                    @if($task->user->avatar)
-                                                        <img src="{{ asset('storage/' . $task->user->avatar) }}" class="w-full h-full object-cover">
-                                                    @else
-                                                        {{ substr($task->user->name, 0, 1) }}
-                                                    @endif
-                                                </div>
-                                                <span class="text-xs text-slate-400">{{ Str::limit($task->user->name, 12) }}</span>
+                                            
+                                            <div class="flex -space-x-3 overflow-hidden py-1 pl-1">
+                                                @foreach($task->users->take(4) as $assignee)
+                                                    <div class="relative w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-[10px] text-white font-bold ring-2 ring-slate-900 shadow-lg cursor-help group/tooltip hover:z-10 hover:scale-110 transition-transform">
+                                                        @if($assignee->avatar)
+                                                            <img src="{{ asset('storage/' . $assignee->avatar) }}" class="w-full h-full rounded-full object-cover">
+                                                        @else
+                                                            {{ strtoupper(substr($assignee->name, 0, 2)) }}
+                                                        @endif
+                                                        
+                                                        <div class="absolute bottom-full mb-2 hidden group-hover/tooltip:block bg-black text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-20 shadow-xl">
+                                                            {{ $assignee->name }}
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                                
+                                                @if($task->users->count() > 4)
+                                                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-[10px] text-slate-300 ring-2 ring-slate-900 font-bold">
+                                                        +{{ $task->users->count() - 4 }}
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
                                     </td>
@@ -106,7 +118,7 @@
 
                                     <td class="px-6 py-4 text-right pr-8">
                                         <div class="flex justify-end gap-2">
-                                            <a href="{{ route('tasks.show', $task) }}" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-blue-600 transition-all border border-transparent hover:border-blue-500/30" title="Lihat">
+                                            <a href="{{ route('tasks.show', $task) }}" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-blue-600 transition-all border border-transparent hover:border-blue-500/30" title="Lihat Detail">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                                             </a>
                                             <a href="{{ route('tasks.edit', $task) }}" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-indigo-600 transition-all border border-transparent hover:border-indigo-500/30" title="Edit">

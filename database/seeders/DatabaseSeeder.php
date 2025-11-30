@@ -24,8 +24,16 @@ class DatabaseSeeder extends Seeder
             'email' => 'andi@cybertask.com',
             'password' => Hash::make('password'),
             'role' => 'karyawan',
+
+            
         ]);
         
+        User::create([
+        'name' => 'yanto',
+            'email' => 'yanto@cybertask.com',
+            'password' => Hash::make('password'),
+            'role' => 'karyawan',
+        ]);
         // 3. Buat Project Contoh (Biar gak kosong)
         \App\Models\Project::create([
             'name' => 'Website Company Profile',
