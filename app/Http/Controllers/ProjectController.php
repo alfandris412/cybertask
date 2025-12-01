@@ -56,7 +56,13 @@ class ProjectController extends Controller
         if ($request->has('members')) {
             $syncData = [];
             foreach ($request->members as $userId) {
-                $userRole = $request->roles[$userId] ?? 'Member';
+                // Ambil nilai role jika ada
+                $userRole = $request->roles[$userId] ?? '';
+                // Jika role kosong, gunakan 'Member' sebagai default
+                // Jika sudah diisi sesuatu, gunakan nilai yang diisi user
+                if (trim($userRole) === '') {
+                    $userRole = 'Member';
+                }
                 $syncData[$userId] = ['role' => $userRole];
             }
             $project->members()->attach($syncData);
