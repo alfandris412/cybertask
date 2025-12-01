@@ -10,10 +10,24 @@
                 </h2>
             </div>
             @if(auth()->user()->role === 'admin')
-                <a href="{{ route('projects.tasks.create', $project) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Tambah Task
-                </a>
+                <div class="flex gap-2">
+                    <a href="{{ route('projects.edit', $project) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-bold transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Edit Project
+                    </a>
+                    <form action="{{ route('projects.destroy', $project) }}" method="POST" onsubmit="return confirm('Hapus project ini? Semua tasks dan data akan terhapus permanen!')" class="inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-bold transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.86 13H5.86L5 7h14zm-4 0V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2h8z"></path></svg>
+                            Hapus Project
+                        </button>
+                    </form>
+                    <a href="{{ route('projects.tasks.create', $project) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Tambah Task
+                    </a>
+                </div>
             @endif
         </div>
     </x-slot>
@@ -29,11 +43,11 @@
                     </div>
                     <div>
                         <p class="text-xs text-slate-400 uppercase font-bold mb-1">Total Tasks</p>
-                        <p class="text-2xl font-bold text-indigo-400">{{ $project->tasks->count() }}</p>
+                        <p class="text-2xl font-bold text-indigo-400">{{ $project->tasks()->count() }}</p>
                     </div>
                     <div>
                         <p class="text-xs text-slate-400 uppercase font-bold mb-1">Selesai</p>
-                        <p class="text-2xl font-bold text-emerald-400">{{ $project->tasks->where('status', 'completed')->count() }} / {{ $project->tasks->count() }}</p>
+                        <p class="text-2xl font-bold text-emerald-400">{{ $project->tasks()->where('status', 'completed')->count() }} / {{ $project->tasks()->count() }}</p>
                     </div>
                 </div>
             </div>
@@ -44,7 +58,7 @@
                     <h3 class="text-sm font-bold text-slate-200">Daftar Tasks</h3>
                 </div>
 
-                @if($project->tasks->isEmpty())
+                @if($tasks->isEmpty())
                     <div class="text-center py-12 px-6">
                         <svg class="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                         <p class="text-slate-400 text-lg mb-4">Belum ada task</p>
@@ -59,6 +73,7 @@
                         <table class="w-full">
                             <thead class="bg-slate-800/50 border-b border-slate-700">
                                 <tr>
+                                    <th class="px-6 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider w-12">No</th>
                                     <th class="px-6 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Task</th>
                                     <th class="px-6 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Priority</th>
                                     <th class="px-6 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
@@ -68,8 +83,11 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-700/50">
-                                @foreach($project->tasks as $task)
+                                @foreach($tasks as $index => $task)
                                     <tr class="hover:bg-slate-800/30 transition-colors">
+                                        <td class="px-6 py-4">
+                                            <span class="text-sm font-semibold text-slate-300">{{ ($tasks->currentPage() - 1) * $tasks->perPage() + $index + 1 }}</span>
+                                        </td>
                                         <td class="px-6 py-4">
                                             <p class="text-sm font-semibold text-white">{{ $task->title }}</p>
                                             <p class="text-xs text-slate-500 line-clamp-1">{{ Str::limit($task->description, 50) }}</p>
@@ -119,6 +137,13 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    {{-- Pagination Links --}}
+                    @if($tasks->hasPages())
+                        <div class="flex justify-center mt-6 p-4 border-t border-slate-800">
+                            {{ $tasks->links('pagination::tailwind') }}
+                        </div>
+                    @endif
                 @endif
             </div>
         </div>

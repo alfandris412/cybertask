@@ -127,6 +127,13 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    {{-- Pagination Links --}}
+                    @if($projects->hasPages())
+                        <div class="flex justify-center mt-6 p-4 border-t border-slate-800">
+                            {{ $projects->links('pagination::tailwind') }}
+                        </div>
+                    @endif
                 @endif
             </div>
         </div>

@@ -35,6 +35,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 // Routes yang bisa diakses oleh both admin dan karyawan
 Route::middleware('auth')->group(function () {
     // View Projects & Tasks (keduanya bisa lihat)
+    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
     Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
     

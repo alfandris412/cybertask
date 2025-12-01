@@ -82,11 +82,11 @@
             {{-- TIM BERTUGAS --}}
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
                 <h3 class="text-sm font-bold text-slate-200 mb-3">Tim Bertugas ({{ $task->users->count() }})</h3>
-                @if($task->usersWithProjectRole->isEmpty())
+                @if($task->users->isEmpty())
                     <p class="text-slate-500 text-sm">Belum ada anggota yang ditugaskan.</p>
                 @else
                     @php
-                        $groupedUsers = $task->usersWithProjectRole->groupBy(function($user) {
+                        $groupedUsers = $task->users->groupBy(function($user) {
                             return $user->project_role ?? 'Member';
                         });
                     @endphp
@@ -133,7 +133,7 @@
                     $progressLogs = $task->comments
                         ->filter(function($c) { return $c->title; })
                         ->sortByDesc('created_at')
-                        ->take(3);
+                        ->take(1);
                 @endphp
 
                 @if($progressLogs->isEmpty())
@@ -389,15 +389,32 @@
                     if (this.isSubmitting) return;
 
                     const form = event.target.closest('form');
+                    
+                    // Kumpulkan data form SEBELUM men-set isSubmitting
                     const formData = new FormData(form);
+                    
+                    // Debug: Tampilkan data yang dikirim
+                    console.log('FormData contents:');
+                    for (let [key, value] of formData.entries()) {
+                        console.log(key + ':', value);
+                    }
+                    
+                    // Pastikan _method PUT ada
+                    if (!formData.get('_method')) {
+                        formData.append('_method', 'PUT');
+                    }
 
                     this.isSubmitting = true;
 
                     try {
                         const response = await fetch(form.action, {
-                            method: 'PUT',
+                            method: 'POST',
                             body: formData,
-                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                            headers: { 
+                                'X-Requested-With': 'XMLHttpRequest', 
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
                         });
 
                         const data = await response.json();

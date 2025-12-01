@@ -92,34 +92,60 @@ class TaskController extends Controller
     // KHUSUS KARYAWAN: Update Status & Link GitHub & Laporan
     public function updateStatus(Request $request, Task $task)
     {
-        $request->validate([
-            'report_title' => 'required|string|max:255',
-            'report_desc'  => 'required|string',
-            'status'       => 'required|in:pending,in_progress,completed',
-            'github_link'  => 'nullable|url', // Validasi URL
-        ]);
+        try {
+            $request->validate([
+                'report_title' => 'required|string|max:255',
+                'report_desc'  => 'required|string',
+                'status'       => 'required|in:pending,in_progress,completed',
+                'github_link'  => 'nullable|url', // Validasi URL
+            ]);
 
-        // Simpan Link GitHub & Status
-        $task->update([
-            'status' => $request->status,
-            'github_link' => $request->github_link ?? $task->github_link,
-        ]);
+            // Debug: Log request data
+            \Log::info('Update Status Request:', [
+                'task_id' => $task->id,
+                'report_title' => $request->report_title,
+                'report_desc' => $request->report_desc,
+                'status' => $request->status,
+                'github_link' => $request->github_link,
+            ]);
 
-        $statusText = match($request->status) {
-            'pending' => 'Pending',
-            'in_progress' => 'On Progress',
-            'completed' => 'Selesai',
-        };
+            // Simpan Link GitHub & Status
+            $task->update([
+                'status' => $request->status,
+                'github_link' => $request->github_link ?? $task->github_link,
+            ]);
 
-        // Simpan Laporan ke Komentar
-        Comment::create([
-            'task_id' => $task->id,
-            'user_id' => auth()->id(),
-            'title'   => $request->report_title,
-            'content' => $request->report_desc . "\n\nStatus: $statusText",
-        ]);
+            $statusText = match($request->status) {
+                'pending' => 'Pending',
+                'in_progress' => 'On Progress',
+                'completed' => 'Selesai',
+            };
 
-        return back()->with('success', 'Laporan berhasil dikirim!');
+            // Simpan Laporan ke Komentar
+            Comment::create([
+                'task_id' => $task->id,
+                'user_id' => auth()->id(),
+                'title'   => $request->report_title,
+                'content' => $request->report_desc . "\n\nStatus: $statusText",
+            ]);
+
+            // Return JSON response for AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Laporan berhasil dikirim!'
+                ]);
+            }
+
+            return back()->with('success', 'Laporan berhasil dikirim!');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation Error:', $e->errors());
+            return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            \Log::error('General Error:', ['message' => $e->getMessage()]);
+            return response()->json(['message' => 'Server error: ' . $e->getMessage()], 500);
+        }
     }
 
     // API Get Members (Untuk Form Create)

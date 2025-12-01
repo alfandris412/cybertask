@@ -12,8 +12,23 @@ class ProjectController extends Controller
     // 1. TAMPILKAN DAFTAR PROJECT (READ)
     public function index()
     {
-        $projects = Project::with('members')->orderBy('created_at', 'desc')->get();
-        return view('admin.projects.index', compact('projects'));
+        $user = Auth::user();
+        
+        if ($user->role === 'admin') {
+            // Admin lihat semua projects
+            $projects = Project::with('members')->orderBy('created_at', 'desc')->paginate(10);
+            return view('admin.projects.index', compact('projects'));
+        } else {
+            // Karyawan lihat projects yang diikuti
+            $projects = Project::whereHas('members', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                })
+                ->with('members')
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+            
+            return view('karyawan.projects.index', compact('projects'));
+        }
     }
 
     // 2. TAMPILKAN FORM TAMBAH (CREATE)
@@ -53,10 +68,8 @@ class ProjectController extends Controller
     // 4. DETAIL PROJECT (SHOW)
     public function show(Project $project)
     {
-        $project->load(['tasks' => function ($q) {
-            $q->with('users')->orderBy('created_at', 'desc');
-        }]);
-        return view('projects.show', compact('project'));
+        $tasks = $project->tasks()->with('users')->orderBy('created_at', 'desc')->paginate(10);
+        return view('projects.show', compact('project', 'tasks'));
     }
 
     // 5. TAMPILKAN FORM EDIT (EDIT)

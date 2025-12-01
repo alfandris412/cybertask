@@ -18,7 +18,15 @@
                 <p class="text-sm text-slate-400 mb-4">Project: {{ $task->project->name }}</p>
 
                 @php
-                    $progressLogs = $task->comments->filter(function($c) { return $c->title; })->sortByDesc('created_at');
+                    $allProgressLogs = $task->comments
+                        ->filter(function($c) { return $c->title; })
+                        ->sortByDesc('created_at');
+                    
+                    $currentPage = request()->get('page', 1);
+                    $perPage = 10;
+                    $total = $allProgressLogs->count();
+                    $offset = ($currentPage - 1) * $perPage;
+                    $progressLogs = $allProgressLogs->slice($offset, $perPage)->values();
                 @endphp
 
                 @if($progressLogs->isEmpty())
@@ -39,13 +47,13 @@
                             <tbody class="divide-y divide-slate-700/50">
                                 @foreach($progressLogs as $index => $log)
                                     <tr class="hover:bg-slate-800/50 transition-colors">
-                                        <td class="px-4 py-3 text-center font-bold text-emerald-400">{{ $index + 1 }}</td>
+                                        <td class="px-4 py-3 text-center font-bold text-emerald-400">{{ ($currentPage - 1) * $perPage + $index + 1 }}</td>
                                         <td class="px-4 py-3 font-semibold text-white">{{ $log->title }}</td>
                                         <td class="px-4 py-3 text-slate-300">{{ $log->user->name }}</td>
                                         <td class="px-4 py-3 text-slate-400 whitespace-nowrap">{{ $log->created_at->format('d M Y, H:i') }}</td>
                                         <td class="px-4 py-3 text-slate-200 truncate max-w-xs">{{ Str::limit($log->content, 80) }}</td>
                                         <td class="px-4 py-3 text-center">
-                                            <button type="button" @click="openDetail({{ $index + 1 }}, '{{ $log->title }}', '{{ $log->user->name }}', '{{ $log->created_at->format('d M Y, H:i') }}', `{{ addslashes($log->content) }}`)" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg transition-colors">
+                                            <button type="button" @click="openDetail({{ ($currentPage - 1) * $perPage + $index + 1 }}, '{{ $log->title }}', '{{ $log->user->name }}', '{{ $log->created_at->format('d M Y, H:i') }}', `{{ addslashes($log->content) }}`)" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg transition-colors">
                                                 Lihat
                                             </button>
                                         </td>
@@ -54,6 +62,27 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    {{-- Simple Pagination Links --}}
+                    @if($total > $perPage)
+                        <div class="flex justify-center items-center gap-2 mt-6">
+                            @if($currentPage > 1)
+                                <a href="{{ request()->url() }}?page={{ $currentPage - 1 }}" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-lg transition-colors">
+                                    ←
+                                </a>
+                            @endif
+                            
+                            <span class="px-4 py-2 bg-slate-900 text-white text-sm rounded-lg">
+                                Halaman {{ $currentPage }} dari {{ ceil($total / $perPage) }}
+                            </span>
+                            
+                            @if($currentPage < ceil($total / $perPage))
+                                <a href="{{ request()->url() }}?page={{ $currentPage + 1 }}" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm rounded-lg transition-colors">
+                                    →
+                                </a>
+                            @endif
+                        </div>
+                    @endif
                 @endif
             </div>
         </div>
