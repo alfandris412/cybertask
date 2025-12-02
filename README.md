@@ -1,5 +1,11 @@
 # CyberTask - Project & Task Management System
 
+## ERD 
+
+
+## UML 
+![Uploading UML (2).png…]()
+
 ## Deskripsi
 
 CyberTask adalah sistem manajemen proyek dan tugas yang dikembangkan dengan Laravel 12 dan Tailwind CSS. Sistem ini dirancang untuk mengelola proyek, menugaskan tugas kepada karyawan, dan memantau progres dengan fitur dashboard yang komprehensif.
