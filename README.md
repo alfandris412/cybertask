@@ -1,10 +1,11 @@
 # CyberTask - Project & Task Management System
 
 ## ERD 
-
+<img width="5664" height="2547" alt="erdcybertask" src="https://github.com/user-attachments/assets/e6ea30b8-10b2-4e30-ad30-82f18021d696" />
 
 ## UML 
-![Uploading UML (2).png…]()
+<img width="1400" height="1000" alt="uml" src="https://github.com/user-attachments/assets/4105bfd1-6296-4dc5-b901-fa2bf27ae1bc" />
+
 
 ## Deskripsi
 
