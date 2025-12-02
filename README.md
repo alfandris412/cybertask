@@ -4,8 +4,7 @@
 <img width="5664" height="2547" alt="erdcybertask" src="https://github.com/user-attachments/assets/e6ea30b8-10b2-4e30-ad30-82f18021d696" />
 
 ## UML 
-<img width="1400" height="1000" alt="UML (2)" src="https://github.com/user-attachments/assets/0e12f44b-bbe7-4782-a807-309e4e9eec7c" />
-
+<img width="2432" height="1728" alt="UML1" src="https://github.com/user-attachments/assets/1791db22-95cf-4de6-b7a8-a7247b36296a" />
 
 ## Deskripsi
 CyberTask adalah sistem manajemen proyek dan tugas yang dikembangkan dengan Laravel 12 dan Tailwind CSS. Sistem ini dirancang untuk mengelola proyek, menugaskan tugas kepada karyawan, dan memantau progres dengan fitur dashboard yang komprehensif.
